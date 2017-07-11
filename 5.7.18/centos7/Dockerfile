@@ -18,7 +18,7 @@ ARG MYSQL_UID=1001
 ARG MYSQL_GID=1001
 ARG MYSQL_USERNAME=mysql
 ARG MYSQL_GROUPNAME=mysql
-ARG MYSQL_DATA_DIR=/usr/local/mysql/data
+ARG MYSQL_DATA_DIR=/var/lib/mysql
 
 ENV APP_UID ${MYSQL_UID}
 ENV APP_GID ${MYSQL_GID}
@@ -32,16 +32,16 @@ COPY ./entrypoint.sh ${TEMP_DIR}/
 
 RUN \
 set -x && \
+mkdir -p ${INSTALL_DIR} ${MYSQL_DATA_DIR} && \
 groupadd --gid ${MYSQL_GID} ${MYSQL_GROUPNAME} && \
 useradd --uid ${MYSQL_UID} --gid ${MYSQL_GID} \
---create-home \
+--no-create-home \
 --home-dir ${INSTALL_DIR} \
 --shell /sbin/nologin \
 --comment "MySQL User" \
 ${MYSQL_USERNAME} && \
 yum-install libaio && \
 TEMP_DIR=/tmp/${VENDOR}-${PRODUCT}/${PRODUCT_VERSION} && \
-mkdir -p ${INSTALL_DIR} && \
 pushd ${TEMP_DIR} && \
 curl -LjSs ${MYSQL_BINARIES_TAR_URL} -o ${MYSQL_BINARIES_TAR} && \
 curl -LjSs ${MYSQL_BINARIES_TAR_ASC_URL} -o ${MYSQL_BINARIES_TAR_ASC} && \
@@ -51,8 +51,8 @@ echo "${MYSQL_BINARIES_TAR_MD5SUM}  ${MYSQL_BINARIES_TAR}" | md5sum -c - && \
 tar -xf ${MYSQL_BINARIES_TAR} --strip-components=1 -C ${INSTALL_DIR} && \
 mv ${TEMP_DIR}/entrypoint.sh ${INSTALL_DIR}/entrypoint.sh && \
 chmod +x ${INSTALL_DIR}/entrypoint.sh && \
-fix-ownership ${INSTALL_DIR} && \
-fix-permissions ${INSTALL_DIR} && \
+fix-ownership ${INSTALL_DIR} ${MYSQL_DATA_DIR} && \
+fix-permissions ${INSTALL_DIR} ${MYSQL_DATA_DIR} && \
 popd && \
 rm -rf ${TEMP_DIR_ROOT}
 
@@ -67,4 +67,3 @@ WORKDIR ${INSTALL_DIR}
 EXPOSE 3306
 
 CMD ./entrypoint.sh
-
